@@ -1,0 +1,1 @@
+"""KI Labs blueprint service."""

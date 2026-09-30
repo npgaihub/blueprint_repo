@@ -1,0 +1,40 @@
+name: Deploy (Vercel)
+
+# Preview deployment for every PR, production deployment for main - only after CI passes.
+# Required repo secrets: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID (see README).
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: ci
+    runs-on: ubuntu-latest
+    # Fork PRs don't get secrets; skip instead of failing.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    environment: ${{ github.event_name == 'push' && 'production' || 'preview' }}
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_ENV: ${{ github.event_name == 'push' && 'production' || 'preview' }}
+    steps:
+      - uses: actions/checkout@v5
+      - run: npm install --global vercel@latest
+      - run: vercel pull --yes --environment=$VERCEL_ENV --token=${{ secrets.VERCEL_TOKEN }}
+      - run: vercel build ${{ env.VERCEL_ENV == 'production' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy
+        run: |
+          url=$(vercel deploy --prebuilt ${{ env.VERCEL_ENV == 'production' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }})
+          echo "Deployed to $url" >> "$GITHUB_STEP_SUMMARY"
