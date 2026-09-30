@@ -30,7 +30,7 @@ jobs:
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       VERCEL_ENV: ${{ github.event_name == 'push' && 'production' || 'preview' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - run: npm install --global vercel@latest
       - run: vercel pull --yes --environment=$VERCEL_ENV --token=${{ secrets.VERCEL_TOKEN }}
       - run: vercel build ${{ env.VERCEL_ENV == 'production' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
